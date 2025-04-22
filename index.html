@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottery App</title>
+    <style>
+        :root {
+            --primary-color: #6c5ce7;
+            --secondary-color: #8e44ad;
+            --accent-color: #e74c3c;
+            --bg-dark: #121212;
+            --bg-card: #1e1e1e;
+            --bg-item: #2a2a2a;
+            --text-primary: #f8f9fa;
+            --text-secondary: #adb5bd;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: var(--bg-card);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            width: 100%;
+            max-width: 600px;
+            overflow: hidden;
+        }
+        
+        h1, h2, h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+        }
+        
+        .input-section {
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #444;
+            background-color: var(--bg-item);
+            color: var(--text-primary);
+            border-radius: 5px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+        }
+        
+        input[type="text"]::placeholder {
+            color: #666;
+        }
+        
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            outline: none;
+            font-weight: bold;
+        }
+        
+        .btn:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-accent {
+            background-color: var(--accent-color);
+        }
+        
+        .btn-control {
+            margin-left: 10px;
+        }
+        
+        .participants-list {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary-color) var(--bg-item);
+        }
+        
+        .participants-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .participants-list::-webkit-scrollbar-track {
+            background: var(--bg-item);
+            border-radius: 10px;
+        }
+        
+        .participants-list::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+            border-radius: 10px;
+        }
+        
+        .participant-item {
+            background-color: var(--bg-item);
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        
+        .participant-item:hover {
+            background-color: #333;
+        }
+        
+        .participant-item span {
+            font-weight: 500;
+        }
+        
+        .participant-item button {
+            background-color: #e53935;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .participant-item button:hover {
+            background-color: #c62828;
+        }
+        
+        .start-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .draw-section {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .draw-container {
+            position: relative;
+            height: 200px;
+            background-color: var(--bg-item);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .draw-status {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            padding: 5px;
+            border-radius: 5px;
+            background-color: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .draw-status.show {
+            opacity: 1;
+        }
+        
+        .draw-item {
+            position: absolute;
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.5s;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .draw-item.current {
+            opacity: 1;
+            transform: scale(1);
+            text-shadow: 0 0 10px rgba(108, 92, 231, 0.7);
+        }
+        
+        .draw-item.eliminated {
+            opacity: 0;
+            transform: scale(1.5);
+            color: #ff3333;
+            text-shadow: 0 0 20px rgba(255, 51, 51, 0.8);
+        }
+        
+        .draw-item.eliminated::before {
+            content: "✕";
+            position: absolute;
+            color: #ff3333;
+            font-size: 3rem;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .results-section {
+            margin-top: 30px;
+            text-align: center;
+            display: none;
+        }
+        
+        .winner-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin: 20px 0;
+            animation: pulse 2s infinite;
+        }
+        
+        .eliminated-list {
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .eliminated-list h3 {
+            margin-bottom: 10px;
+            color: var(--primary-color);
+            text-align: left;
+        }
+        
+        .eliminated-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+            color: var(--text-secondary);
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+                text-shadow: 0 0 20px rgba(231, 76, 60, 0.7);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 500px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .draw-item {
+                font-size: 1.5rem;
+            }
+            
+            .winner-display {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lottery Draw</h1>
+        
+        <div id="setup-screen">
+            <div class="input-section">
+                <div class="input-group">
+                    <input type="text" id="participant-input" placeholder="Enter participant name or code..." autocomplete="off">
+                    <button class="btn btn-control" id="add-btn">Add</button>
+                </div>
+                
+                <div class="participants-list" id="participants-list">
+                    <!-- Participants will be added here dynamically -->
+                </div>
+            </div>
+            
+            <div class="start-section">
+                <button class="btn btn-accent" id="start-btn" disabled>Start Lottery</button>
+            </div>
+        </div>
+        
+        <div id="draw-screen" class="draw-section">
+            <div class="draw-container" id="draw-container">
+                <!-- Draw elements will be added here -->
+                <div class="draw-status" id="draw-status"></div>
+            </div>
+        </div>
+        
+        <div id="results-screen" class="results-section">
+            <h2>Lottery Results</h2>
+            <div class="winner-display" id="winner-display"></div>
+            <button class="btn" id="restart-btn">New Lottery</button>
+            
+            <div class="eliminated-list">
+                <h3>Elimination Order:</h3>
+                <div id="eliminated-list">
+                    <!-- Eliminated participants will be listed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const participantInput = document.getElementById('participant-input');
+            const addBtn = document.getElementById('add-btn');
+            const participantsList = document.getElementById('participants-list');
+            const startBtn = document.getElementById('start-btn');
+            const setupScreen = document.getElementById('setup-screen');
+            const drawScreen = document.getElementById('draw-screen');
+            const drawContainer = document.getElementById('draw-container');
+            const drawStatus = document.getElementById('draw-status');
+            const resultsScreen = document.getElementById('results-screen');
+            const winnerDisplay = document.getElementById('winner-display');
+            const eliminatedList = document.getElementById('eliminated-list');
+            const restartBtn = document.getElementById('restart-btn');
+            
+            let participants = [];
+            let eliminatedParticipants = [];
+            let randomSequence = [];
+            
+            // Add participant
+            function addParticipant() {
+                const name = participantInput.value.trim();
+                if (name === '') return;
+                
+                const participant = {
+                    id: Date.now(),
+                    name: name
+                };
+                
+                participants.push(participant);
+                renderParticipants();
+                participantInput.value = '';
+                participantInput.focus();
+                
+                // Enable start button if we have at least 2 participants
+                startBtn.disabled = participants.length < 2;
+            }
+            
+            // Render participants list
+            function renderParticipants() {
+                participantsList.innerHTML = '';
+                participants.forEach((participant, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'participant-item';
+                    item.innerHTML = `
+                        <span>${index + 1} - ${participant.name}</span>
+                        <button data-id="${participant.id}">×</button>
+                    `;
+                    
+                    const deleteBtn = item.querySelector('button');
+                    deleteBtn.addEventListener('click', function() {
+                        removeParticipant(participant.id);
+                    });
+                    
+                    participantsList.appendChild(item);
+                });
+            }
+            
+            // Remove participant
+            function removeParticipant(id) {
+                participants = participants.filter(p => p.id !== id);
+                renderParticipants();
+                startBtn.disabled = participants.length < 2;
+            }
+            
+            // Generate random sequence without replacement
+            function getRandomSequence(count) {
+                const allIndices = [...Array(count).keys()];
+                for (let i = allIndices.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [allIndices[i], allIndices[j]] = [allIndices[j], allIndices[i]];
+                }
+                return allIndices.slice(0, count - 1);
+            }
+            
+            // Start the lottery
+            async function startLottery() {
+                setupScreen.style.display = 'none';
+                drawScreen.style.display = 'block';
+                
+                // Get random sequence
+                randomSequence = getRandomSequence(participants.length);
+                
+                // Create draw elements
+                drawContainer.innerHTML = '';
+                // Add the status div back since we cleared the container
+                drawContainer.appendChild(drawStatus);
+                
+                participants.forEach((participant, index) => {
+                    const drawItem = document.createElement('div');
+                    drawItem.className = 'draw-item';
+                    drawItem.textContent = `${index + 1} - ${participant.name}`;
+                    drawItem.id = `draw-item-${participant.id}`;
+                    drawContainer.appendChild(drawItem);
+                });
+                
+                // Start animation
+                const drawItems = document.querySelectorAll('.draw-item');
+                let currentIndex = 0;
+                let remainingParticipants = [...participants];
+                
+                const intervalId = setInterval(() => {
+                    // Clear previous
+                    drawItems.forEach(item => {
+                        item.classList.remove('current');
+                        item.classList.remove('eliminated');
+                    });
+                    
+                    // Show current
+                    if (remainingParticipants.length > 1) {
+                        currentIndex = (currentIndex + 1) % remainingParticipants.length;
+                        const currentParticipant = remainingParticipants[currentIndex];
+                        const currentElement = document.getElementById(`draw-item-${currentParticipant.id}`);
+                        
+                        if (currentElement) {
+                            currentElement.classList.add('current');
+                        }
+                    }
+                }, 200);
+                
+                // Elimination process
+                let eliminationIndex = 0;
+                
+                function eliminateNext() {
+                    if (eliminationIndex >= randomSequence.length) {
+                        // End of lottery
+                        clearInterval(intervalId);
+                        
+                        // Show winner
+                        setTimeout(() => {
+                            drawScreen.style.display = 'none';
+                            resultsScreen.style.display = 'block';
+                            
+                            const winner = remainingParticipants[0];
+                            winnerDisplay.textContent = `${winner.name}`;
+                            
+                            // Show eliminated participants
+                            eliminatedList.innerHTML = '';
+                            eliminatedParticipants.forEach((participant, index) => {
+                                const item = document.createElement('div');
+                                item.className = 'eliminated-item';
+                                item.textContent = `${eliminatedParticipants.length - index}. ${participant.name}`;
+                                eliminatedList.appendChild(item);
+                            });
+                        }, 1000);
+                        
+                        return;
+                    }
+                    
+                    setTimeout(() => {
+                        // Eliminate participant
+                        const eliminateIndex = randomSequence[eliminationIndex];
+                        if (eliminateIndex < remainingParticipants.length) {
+                            const eliminatedParticipant = remainingParticipants[eliminateIndex];
+                            
+                            // Add to eliminated list
+                            eliminatedParticipants.unshift(eliminatedParticipant);
+                            
+                            // Show elimination animation
+                            const elementToEliminate = document.getElementById(`draw-item-${eliminatedParticipant.id}`);
+                            if (elementToEliminate) {
+                                // Show status message
+                                drawStatus.textContent = `Participant "${eliminatedParticipant.name}" eliminated!`;
+                                drawStatus.classList.add('show');
+                                
+                                // Highlight and eliminate
+                                elementToEliminate.classList.add('current');
+                                setTimeout(() => {
+                                    elementToEliminate.classList.add('eliminated');
+                                    
+                                    // After a delay, remove from remaining
+                                    setTimeout(() => {
+                                        // Hide status
+                                        drawStatus.classList.remove('show');
+                                        
+                                        // Remove from remaining
+                                        remainingParticipants = remainingParticipants.filter(p => p.id !== eliminatedParticipant.id);
+                                        
+                                        // Reset current index if needed
+                                        if (currentIndex >= remainingParticipants.length) {
+                                            currentIndex = 0;
+                                        }
+                                        
+                                        // Proceed to next elimination
+                                        eliminationIndex++;
+                                        if (remainingParticipants.length > 1) {
+                                            eliminateNext();
+                                        } else {
+                                            // Show final winner status
+                                            if (remainingParticipants.length === 1) {
+                                                drawStatus.textContent = `Winner: ${remainingParticipants[0].name}!`;
+                                                drawStatus.style.color = '#6c5ce7';
+                                                drawStatus.style.fontSize = '1.5rem';
+                                                drawStatus.classList.add('show');
+                                            }
+                                            eliminateNext(); // Call one more time to show the winner
+                                        }
+                                    }, 1500);
+                                }, 500);
+                            }
+                        } else {
+                            // Skip invalid index
+                            eliminationIndex++;
+                            eliminateNext();
+                        }
+                    }, 3000);
+                }
+                
+                // Start elimination after a delay
+                setTimeout(() => {
+                    drawStatus.textContent = "Starting the lottery!";
+                    drawStatus.classList.add('show');
+                    
+                    setTimeout(() => {
+                        drawStatus.classList.remove('show');
+                        eliminateNext();
+                    }, 1500);
+                }, 2000);
+            }
+            
+            // Restart the lottery
+            function restartLottery() {
+                participants = [];
+                eliminatedParticipants = [];
+                randomSequence = [];
+                
+                resultsScreen.style.display = 'none';
+                setupScreen.style.display = 'block';
+                startBtn.disabled = true;
+                
+                // Reset all styles
+                drawStatus.classList.remove('show');
+                drawStatus.style.color = '';
+                drawStatus.style.fontSize = '';
+                
+                participantInput.value = '';
+                participantsList.innerHTML = '';
+                eliminatedList.innerHTML = '';
+            }
+            
+            // Event listeners
+            addBtn.addEventListener('click', addParticipant);
+            participantInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addParticipant();
+                }
+            });
+            startBtn.addEventListener('click', startLottery);
+            restartBtn.addEventListener('click', restartLottery);
+        });
+    </script>
+</body>
+</html>
