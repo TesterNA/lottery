@@ -570,7 +570,7 @@
                 participants.forEach((participant, index) => {
                     const drawItem = document.createElement('div');
                     drawItem.className = 'draw-item';
-                    drawItem.textContent = `${index + 1} - ${participant.name}`;
+                    drawItem.textContent = `${participant.name}`;
                     drawItem.id = `draw-item-${participant.id}`;
                     drawContainer.appendChild(drawItem);
                 });
@@ -645,7 +645,7 @@
                                 eliminatedParticipants.forEach((participant, index) => {
                                     const item = document.createElement('div');
                                     item.className = 'eliminated-item';
-                                    item.textContent = `${participant.name}`;
+                                    item.textContent = `${eliminatedParticipants.length - index}. ${participant.name}`;
                                     eliminatedList.appendChild(item);
                                 });
                             }, 2000);
