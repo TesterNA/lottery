@@ -182,23 +182,6 @@
             margin-top: 20px;
         }
         
-        .draw-section {
-            margin-top: 30px;
-            display: none;
-        }
-        
-        .draw-container {
-            position: relative;
-            height: 200px;
-            background-color: var(--bg-item);
-            border-radius: 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
-        }
-        
         .speed-control {
             margin-top: 15px;
             display: flex;
@@ -260,6 +243,23 @@
             text-align: center;
             color: var(--primary-color);
             font-weight: bold;
+        }
+        
+        .draw-section {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .draw-container {
+            position: relative;
+            height: 200px;
+            background-color: var(--bg-item);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
         }
         
         .draw-status {
@@ -458,6 +458,7 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
             const participantInput = document.getElementById('participant-input');
             const addBtn = document.getElementById('add-btn');
             const participantsList = document.getElementById('participants-list');
@@ -473,15 +474,14 @@
             const speedSlider = document.getElementById('speed-slider');
             const speedValue = document.getElementById('speed-value');
             
+            // State variables
             let participants = [];
             let eliminatedParticipants = [];
-            let randomSequence = [];
-            let intervalId = null;
+            let lotteryAnimation = null; // To store animation interval ID
             
-            // Speed slider 
+            // Show speed value on slider change
             speedSlider.addEventListener('input', function() {
-                const value = this.value;
-                speedValue.textContent = value + 's';
+                speedValue.textContent = this.value + 's';
             });
             
             // Add participant
@@ -530,44 +530,58 @@
                 startBtn.disabled = participants.length < 2;
             }
             
-            // Generate random sequence without replacement
-            function getRandomSequence(count) {
-                const allIndices = [...Array(count).keys()];
-                for (let i = allIndices.length - 1; i > 0; i--) {
+            // Generate random elimination order
+            function getRandomEliminationOrder(count) {
+                const indices = [...Array(count).keys()];
+                // Fisher-Yates shuffle
+                for (let i = indices.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [allIndices[i], allIndices[j]] = [allIndices[j], allIndices[i]];
+                    [indices[i], indices[j]] = [indices[j], indices[i]];
                 }
-                return allIndices.slice(0, count - 1);
+                return indices;
             }
             
             // Start the lottery
-            async function startLottery() {
+            function startLottery() {
+                // Clear any existing animation
+                if (lotteryAnimation) {
+                    clearInterval(lotteryAnimation);
+                }
+                
+                // Get elimination speed
+                const eliminationSpeed = parseFloat(speedSlider.value) * 1000;
+                
+                // Switch to draw screen
                 setupScreen.style.display = 'none';
                 drawScreen.style.display = 'block';
                 
-                // Get random sequence
-                randomSequence = getRandomSequence(participants.length);
+                // Create copy of participants for elimination
+                let activeParticipants = [...participants];
+                eliminatedParticipants = [];
                 
-                // Create draw elements
+                // Create elimination order
+                const eliminationOrder = getRandomEliminationOrder(activeParticipants.length);
+                const totalRounds = activeParticipants.length - 1; // All but one will be eliminated
+                
+                // Create drawing elements
                 drawContainer.innerHTML = '';
-                // Add the status div back since we cleared the container
                 drawContainer.appendChild(drawStatus);
                 
                 participants.forEach((participant, index) => {
                     const drawItem = document.createElement('div');
                     drawItem.className = 'draw-item';
-                    drawItem.textContent = `${participant.name}`;
+                    drawItem.textContent = `${index + 1} - ${participant.name}`;
                     drawItem.id = `draw-item-${participant.id}`;
                     drawContainer.appendChild(drawItem);
                 });
                 
-                // Start animation
+                // Get all draw items
                 const drawItems = document.querySelectorAll('.draw-item');
                 let currentIndex = 0;
-                let remainingParticipants = [...participants];
                 
-                intervalId = setInterval(() => {
-                    // Clear previous
+                // Start animation
+                lotteryAnimation = setInterval(() => {
+                    // Clear previous highlighting
                     drawItems.forEach(item => {
                         if (!item.classList.contains('eliminated') && !item.classList.contains('winner')) {
                             item.classList.remove('current');
@@ -575,9 +589,9 @@
                     });
                     
                     // Show current
-                    if (remainingParticipants.length > 1) {
-                        currentIndex = (currentIndex + 1) % remainingParticipants.length;
-                        const currentParticipant = remainingParticipants[currentIndex];
+                    if (activeParticipants.length > 1) {
+                        currentIndex = (currentIndex + 1) % activeParticipants.length;
+                        const currentParticipant = activeParticipants[currentIndex];
                         const currentElement = document.getElementById(`draw-item-${currentParticipant.id}`);
                         
                         if (currentElement && !currentElement.classList.contains('eliminated')) {
@@ -586,173 +600,153 @@
                     }
                 }, 200);
                 
-                // Elimination process
-                let eliminationIndex = 0;
+                // Start elimination process
+                drawStatus.textContent = "Starting the lottery!";
+                drawStatus.classList.add('show');
                 
-                function eliminateNext() {
-                    // If we've gone through all eliminations
-                    if (eliminationIndex >= randomSequence.length) {
-                        clearInterval(intervalId);
-                        
-                        // There should be exactly one participant left - our winner
-                        if (remainingParticipants.length === 1) {
-                            const winner = remainingParticipants[0];
+                let currentRound = 0;
+                
+                function runNextRound() {
+                    // If we've finished all rounds
+                    if (currentRound >= totalRounds) {
+                        // Should have exactly one participant left
+                        if (activeParticipants.length === 1) {
+                            const winner = activeParticipants[0];
                             
-                            // Show the winner
+                            // Stop the animation
+                            clearInterval(lotteryAnimation);
+                            
+                            // Clear all current markers
+                            drawItems.forEach(item => {
+                                item.classList.remove('current');
+                            });
+                            
+                            // Mark the winner
                             const winnerElement = document.getElementById(`draw-item-${winner.id}`);
                             if (winnerElement) {
-                                // Clear any ongoing animations
-                                drawItems.forEach(item => {
-                                    item.classList.remove('current');
-                                });
-                                
-                                // Highlight the winner
                                 winnerElement.classList.add('winner');
-                                
-                                // Show winner message
-                                drawStatus.textContent = `Winner: ${winner.name}!`;
-                                drawStatus.style.color = '#6c5ce7';
-                                drawStatus.style.fontSize = '1.5rem';
-                                drawStatus.classList.add('show');
-                                
-                                // Show results screen after a delay
-                                setTimeout(() => {
-                                    drawScreen.style.display = 'none';
-                                    resultsScreen.style.display = 'block';
-                                    
-                                    winnerDisplay.textContent = `${winner.name}`;
-                                    
-                                    // Show eliminated participants
-                                    eliminatedList.innerHTML = '';
-                                    eliminatedParticipants.forEach((participant, index) => {
-                                        const item = document.createElement('div');
-                                        item.className = 'eliminated-item';
-                                        item.textContent = `${eliminatedParticipants.length - index}. ${participant.name}`;
-                                        eliminatedList.appendChild(item);
-                                    });
-                                }, 1500);
                             }
+                            
+                            // Show winner message
+                            drawStatus.textContent = `Winner: ${winner.name}!`;
+                            drawStatus.style.color = '#6c5ce7';
+                            drawStatus.style.fontSize = '1.5rem';
+                            drawStatus.classList.add('show');
+                            
+                            // Show results after delay
+                            setTimeout(() => {
+                                drawScreen.style.display = 'none';
+                                resultsScreen.style.display = 'block';
+                                
+                                winnerDisplay.textContent = winner.name;
+                                
+                                // Show elimination order
+                                eliminatedList.innerHTML = '';
+                                eliminatedParticipants.forEach((participant, index) => {
+                                    const item = document.createElement('div');
+                                    item.className = 'eliminated-item';
+                                    item.textContent = `${participant.name}`;
+                                    eliminatedList.appendChild(item);
+                                });
+                            }, 2000);
                         }
                         return;
                     }
                     
-                    // Get elimination speed
-                    const eliminationDelay = parseFloat(speedSlider.value) * 1000;
+                    // Hide any previous status message
+                    drawStatus.classList.remove('show');
                     
+                    // Wait a bit before next elimination
                     setTimeout(() => {
-                        // Eliminate participant
-                        const eliminateIndex = randomSequence[eliminationIndex];
-                        if (eliminateIndex < remainingParticipants.length) {
-                            const eliminatedParticipant = remainingParticipants[eliminateIndex];
+                        // Get participant to eliminate based on the elimination order
+                        const currentEliminationIndex = eliminationOrder[currentRound];
+                        let indexToUse = currentEliminationIndex;
+                        
+                        // We need to adjust if we've already eliminated some participants
+                        if (currentEliminationIndex >= activeParticipants.length) {
+                            indexToUse = currentEliminationIndex % activeParticipants.length;
+                        }
+                        
+                        const eliminatedParticipant = activeParticipants[indexToUse];
+                        
+                        // If we're eliminating the last few participants, stop the animation
+                        if (activeParticipants.length <= 2) {
+                            clearInterval(lotteryAnimation);
+                        }
+                        
+                        // Find the DOM element
+                        const elementToEliminate = document.getElementById(`draw-item-${eliminatedParticipant.id}`);
+                        if (elementToEliminate) {
+                            // Show status message
+                            drawStatus.textContent = `Participant "${eliminatedParticipant.name}" eliminated!`;
+                            drawStatus.classList.add('show');
+                            
+                            // Mark as eliminated
+                            elementToEliminate.classList.add('current');
+                            elementToEliminate.classList.add('eliminated');
+                            
+                            // Remove from active participants
+                            activeParticipants = activeParticipants.filter(p => p.id !== eliminatedParticipant.id);
                             
                             // Add to eliminated list
                             eliminatedParticipants.unshift(eliminatedParticipant);
                             
-                            // Show elimination animation
-                            const elementToEliminate = document.getElementById(`draw-item-${eliminatedParticipant.id}`);
-                            if (elementToEliminate) {
-                                // Stop all animations if this is the second-to-last participant
-                                if (remainingParticipants.length <= 2) {
-                                    clearInterval(intervalId);
-                                    
-                                    // Clear animations for all participants except the one being eliminated
-                                    drawItems.forEach(item => {
-                                        if (item !== elementToEliminate) {
-                                            item.classList.remove('current');
-                                        }
-                                    });
-                                }
-                                
-                                // Show status message
-                                drawStatus.textContent = `Participant "${eliminatedParticipant.name}" eliminated!`;
-                                drawStatus.classList.add('show');
-                                
-                                // Highlight the eliminated participant and mark as eliminated
-                                elementToEliminate.classList.add('current');
-                                elementToEliminate.classList.add('eliminated');
-                                
-                                // After a delay, move to next step
-                                setTimeout(() => {
-                                    // Hide status
-                                    drawStatus.classList.remove('show');
-                                    
-                                    // Remove from remaining participants
-                                    remainingParticipants = remainingParticipants.filter(p => p.id !== eliminatedParticipant.id);
-                                    
-                                    // Reset current index if needed
-                                    if (currentIndex >= remainingParticipants.length) {
-                                        currentIndex = 0;
-                                    }
-                                    
-                                    // Move to next elimination
-                                    eliminationIndex++;
-                                    
-                                    // If only one participant left, show them as winner
-                                    if (remainingParticipants.length === 1) {
-                                        const winner = remainingParticipants[0];
-                                        const winnerElement = document.getElementById(`draw-item-${winner.id}`);
-                                        
-                                        if (winnerElement) {
-                                            winnerElement.classList.add('winner');
-                                        }
-                                        
-                                        // Proceed to finish the lottery
-                                        eliminateNext();
-                                    } 
-                                    // Otherwise continue eliminating
-                                    else if (remainingParticipants.length > 1) {
-                                        eliminateNext();
-                                    }
-                                }, eliminationDelay);
-                            }
-                        } else {
-                            // Skip invalid index
-                            eliminationIndex++;
-                            eliminateNext();
+                            // Proceed to next round after delay
+                            currentRound++;
+                            setTimeout(() => {
+                                runNextRound();
+                            }, eliminationSpeed);
                         }
                     }, 1000);
                 }
                 
-                // Start elimination after a delay
+                // Start the first round after a delay
                 setTimeout(() => {
-                    drawStatus.textContent = "Starting the lottery!";
-                    drawStatus.classList.add('show');
-                    
-                    setTimeout(() => {
-                        drawStatus.classList.remove('show');
-                        eliminateNext();
-                    }, 1500);
-                }, 1000);
+                    drawStatus.classList.remove('show');
+                    runNextRound();
+                }, 1500);
             }
             
-            // Restart the lottery
+            // Restart lottery
             function restartLottery() {
+                // Clear state
                 participants = [];
                 eliminatedParticipants = [];
-                randomSequence = [];
                 
-                // Clean up any running interval
-                if (intervalId) {
-                    clearInterval(intervalId);
-                    intervalId = null;
+                // Stop any animation
+                if (lotteryAnimation) {
+                    clearInterval(lotteryAnimation);
+                    lotteryAnimation = null;
                 }
                 
+                // Clear any timeouts
+                const highestTimeoutId = setTimeout(() => {}, 0);
+                for (let i = 0; i < highestTimeoutId; i++) {
+                    clearTimeout(i);
+                }
+                
+                // Reset UI
                 resultsScreen.style.display = 'none';
                 setupScreen.style.display = 'block';
                 drawScreen.style.display = 'none';
-                startBtn.disabled = true;
                 
-                // Reset all styles
+                // Reset styles
                 drawStatus.classList.remove('show');
                 drawStatus.style.color = '';
                 drawStatus.style.fontSize = '';
                 
+                // Clear content
                 participantInput.value = '';
                 participantsList.innerHTML = '';
                 eliminatedList.innerHTML = '';
+                drawContainer.innerHTML = '';
+                drawContainer.appendChild(drawStatus);
+                
+                // Reset buttons
+                startBtn.disabled = true;
             }
             
-            // Event listeners
+            // Add event listeners
             addBtn.addEventListener('click', addParticipant);
             participantInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
